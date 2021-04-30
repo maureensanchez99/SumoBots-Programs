@@ -146,7 +146,7 @@ Offensive_Code:
   ' If opponent is not in view, scan last known direction. Turn toward
   ' opponent if seen by one "eye" -- if both, lunge forward
 
-  BRANCH irBits, [Search, Spin_Right, Spin_Left, Fast_Fwd]
+  BRANCH irBits, [Search, Spin_Right, Spin_Left, Slow_Fwd]
 
   GOTO Main
 
