@@ -1,0 +1,132 @@
+' TS Build 3 Tracking Program.BS2
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+'
+'********************* Tracking Program ************************************
+'
+' Copyright Louis A. Lippincott 2013 All Rights Reserved
+'
+' Created by Lou Lippincott 6/21/13 to include an adjustment (AGC constant) for IR receiver sensitivity
+' and a dynamic adjustment for the Line Sensors at Startup. A dynamic adjustment will
+' help to compensate for changes in ambient lighting at the time of the match.
+'
+' A larger value for AGC will make the IR Receivers less sensitive and will shorten the "Kill-Zone."
+' A smaller value for AGC will make the IR Receivers more sensitive and more prone to false triggers.
+'
+' This code is streamlined to remove most of the delays to improve response time and IR Sensor sample rate.
+'
+' NOTE: This software will work best with the hardware IR Sensor changes suggested by Lou Lippincott
+'*********************************************************************************
+'
+' This program will make your SumoBot track an object as it's moved in front of the SumoBot.
+' Use this program to fine tune your AGC value and the positioning of the front IR Sensors.
+' The Red LED will light and the speaker will buzz when the SumoBot is locked on a target.
+'
+'*************************************************************************************
+
+' -----[ Constants ]-------------------------------------------------------
+
+AGC          CON        06                      ' Left/Right IR Receivers AGC time in milliseconds
+
+LFastF       CON        1000                    ' left motor fast forward
+LSlowF       CON        800                     ' left motor slow forward
+LStop        CON        750                     ' left motor stop
+LSlowR       CON        700                     ' left motor slow reverse
+LFastR       CON        500                     ' left motor fast reverse
+
+RFastF       CON        500                     ' right motor fast forward
+RSlowF       CON        700                     ' right motor slow forward
+RStop        CON        750                     ' right motor stop
+RSlowR       CON        800                     ' right motor slow reverse
+RFastR       CON        1000                    ' right motor fast reverse
+
+' -----[ I/O Definitions ]-------------------------------------------------
+
+Speaker      PIN        1                       ' Speaker
+RedLED       PIN        0                       ' Red LED used to show status
+
+LIrOut       PIN        4                       ' left IR LED output
+LIRIn        PIN        11                      ' left IR sensor input
+RIROut       PIN        15                      ' right IR LED output
+RIRIn        PIN        14                      ' right IR sensor input
+
+LMotor       PIN        13                      ' left servo motor
+RMotor       PIN        12                      ' right servo motor
+
+' -----[ Variables ]-------------------------------------------------------
+
+Run_Count    VAR        Byte                    ' Count how many matches we've played between power cycles
+Delay_Count  VAR        Byte                    ' Count how many seconds since reset button
+IRBits       VAR        Nib                     ' IR readings (l & r)
+IRLeft       VAR        irBits.BIT1
+IRRight      VAR        irBits.BIT0
+
+' -----[ EEPROM Data ]-----------------------------------------------------
+
+RunCount    DATA       $00                     ' Run counter
+
+'*****************************************************************************************
+' -----[ Initialization ]--------------------------------------------------
+'*****************************************************************************************
+Reset:
+  LOW LMotor                                   ' Make Motor pins outputs
+  LOW RMotor
+
+  READ RunCount, Run_Count                     ' Read Run Counter
+  Run_Count = Run_Count + 1                    ' Ran one more time
+  WRITE RunCount, Run_Count                    ' Store it back into NVRAM
+  Run_Count = Run_Count & 1                    ' Make it Odd or Even
+  IF (Run_Count = 1) THEN END                  ' Run every other time reset button is pushed
+
+Start_Delay:                                   ' five second delay
+  FOR Delay_Count = 1 TO 5
+    HIGH RedLED                                ' show active
+    PAUSE 700
+    INPUT RedLED                               ' blink each second
+    FREQOUT Speaker, 300, 4000, 3300           ' beep each second
+  NEXT
+
+' -----[ Program Code ]----------------------------------------------------
+
+Main:
+
+  GOSUB Read_IR_Sensors
+
+  BRANCH irBits, [Halt, Spin_Right, Spin_Left, Locked]
+
+  GOTO Main
+
+
+Spin_Left:                                      ' right sensor was active
+    PULSOUT LMotor, LFastR
+    PULSOUT RMotor, RFastF
+  GOTO Main
+
+Spin_Right:                                     ' left sensor was active
+    PULSOUT LMotor, LFastF
+    PULSOUT RMotor, RFastR
+  GOTO Main
+
+Halt:                                            ' stop motors
+    PULSOUT LMotor, LStop
+    PULSOUT RMotor, RStop
+    GOTO Main
+
+Locked:                                          ' Locked on target
+    HIGH RedLED
+    HIGH Speaker
+    PULSOUT LMotor, LStop
+    PULSOUT RMotor, RStop
+    INPUT RedLED                                 ' Blink each time we attack
+    LOW Speaker                                  ' Make some noise each time we attack
+  GOTO Main
+
+
+' -----[ Subroutines ]-----------------------------------------------------
+
+Read_IR_Sensors:
+  FREQOUT LIROut, AGC, 38500                   ' modulate left IR LED, set AGC level in receiver
+  irLeft = ~LIRIn                              ' read input (1 = target)
+  FREQOUT RIROut, AGC, 38500                   ' modulate right IR LED, set AGC level in receiver
+  irRight = ~RIRIn                             ' read input (1 = target)
+ RETURN

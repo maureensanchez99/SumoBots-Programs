@@ -1,0 +1,57 @@
+' TS Debug Tracking.BS2
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+'
+'********************* Debug Tracking Program ************************************
+'
+' Copyright Louis A. Lippincott 2013 All Rights Reserved
+'
+' Created by Lou Lippincott 6/21/13 to include an adjustment (AGC constant) for IR receiver sensitivity
+' and a dynamic adjustment for the Line Sensors at Startup. A dynamic adjustment will
+' help to compensate for changes in ambient lighting at the time of the match.
+'
+' A larger value for AGC will make the IR Receivers less sensitive and will shorten the "Kill-Zone."
+' A smaller value for AGC will make the IR Receivers more sensitive and more prone to false triggers.
+'
+'
+' NOTE: This software will work best with the hardware IR Sensor changes suggested by Lou Lippincott
+'*********************************************************************************
+'
+' This program reports the status of the front IR Sensors.
+' Use this program to fine tune your IR positioning and AGC value.
+' Document your AGC value for use in the other programs.
+'
+'*************************************************************************************
+
+' -----[ Constants ]-------------------------------------------------------
+
+AGC          CON        08                      ' Left/Right IR Receivers AGC time in milliseconds
+
+' -----[ I/O Definitions ]-------------------------------------------------
+
+LIrOut       PIN        4                       ' left IR LED output
+LIRIn        PIN        11                      ' left IR sensor input
+RIROut       PIN        15                      ' right IR LED output
+RIRIn        PIN        14                      ' right IR sensor input
+
+' -----[ Variables ]-------------------------------------------------------
+
+IRBits       VAR        Nib                     ' IR readings (l & r)
+IRLeft       VAR        irBits.BIT1
+IRRight      VAR        irBits.BIT0
+
+
+Main:
+  DO
+    FREQOUT LIROut, AGC, 38500                  ' modulate left IR LED - Start AGC Pulse
+     irLeft = ~LIRIn                            ' read input (1 = target)
+
+    FREQOUT RIROut, AGC, 38500                  ' modulate right IR LED - Start AGC Pulse
+    irRight = ~RIRIn                            ' read input (1 = target)
+
+    DEBUG HOME,
+          "L R", CR,
+          "----", CR,
+          BIN1 irLeft, " ", BIN1 irRight
+  LOOP
+  END

@@ -1,0 +1,91 @@
+' TS Debug Motor Left.BS2
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+'
+'********************* Straight Search and Destroy Program ************************************
+'
+' Copyright Louis A. Lippincott 2013 All Rights Reserved
+'
+'*********************************************************************************
+'
+' This program spins the bot left.
+' Use this program to validate/debug the motors.
+'
+'*************************************************************************************
+
+' -----[ I/O Definitions ]-------------------------------------------------
+
+Speaker      PIN        1                       ' Speaker
+RedLED       PIN        0                       ' Red LED used to show status
+
+LIrOut       PIN        4                       ' left IR LED output
+LIRIn        PIN        11                      ' left IR sensor input
+RIROut       PIN        15                      ' right IR LED output
+RIRIn        PIN        14                      ' right IR sensor input
+
+LMotor       PIN        13                      ' left servo motor
+RMotor       PIN        12                      ' right servo motor
+
+LLinePower   PIN        10                      ' left line sensor power
+LLineIn      PIN        9                       ' left line sensor input
+RLinePower   PIN        7                       ' right line sensor power
+RLineIn      PIN        8                       ' right line sensor input
+
+' -----[ Constants ]-------------------------------------------------------
+
+LFastF       CON        1000                    ' left motor fast forward
+LSlowF       CON        800                     ' left motor slow forward
+LStop        CON        750                     ' left motor stop
+LSlowR       CON        700                     ' left motor slow reverse
+LFastR       CON        500                     ' left motor fast reverse
+
+RFastF       CON        500                     ' right motor fast forward
+RSlowF       CON        700                     ' right motor slow forward
+RStop        CON        750                     ' right motor stop
+RSlowR       CON        800                     ' right motor slow reverse
+RFastR       CON        1000                    ' right motor fast reverse
+
+' -----[ Variables ]-------------------------------------------------------
+
+Ring_Count   VAR        Byte                    ' Counter
+Run_Count    VAR        Byte                    ' Count how many matches we've played between power cycles
+Delay_Count  VAR        Byte                    ' Count how many seconds since reset button
+
+
+' -----[ EEPROM Data ]-----------------------------------------------------
+
+RunCount    DATA       $00                     ' Run counter
+
+'*****************************************************************************************
+' -----[ Initialization ]--------------------------------------------------
+'*****************************************************************************************
+'************************** DO NOT CHANGE CODE HERE! (Rule Violation!) *******************
+'*****************************************************************************************
+Reset:
+  LOW LMotor                                   ' Make Motor pins outputs
+  LOW RMotor
+
+  READ RunCount, Run_Count                     ' Read Run Counter
+  Run_Count = Run_Count + 1                    ' Ran one more time
+  WRITE RunCount, Run_Count                    ' Store it back into NVRAM
+  Run_Count = Run_Count & 1                    ' Make it Odd or Even
+  IF (Run_Count = 1) THEN END                  ' Run every other time reset button is pushed
+
+Start_Delay:                                   ' five second delay
+  FOR Delay_Count = 1 TO 5
+    HIGH RedLED                                ' show active
+    PAUSE 700
+    INPUT RedLED                               ' blink each second
+    FREQOUT Speaker, 300, 4000, 3300           ' beep each second
+  NEXT
+
+' -----[ Program Code ]----------------------------------------------------
+
+Main:
+
+Pivot_Left:
+  FOR Ring_count = 1 TO 100                      ' You can determine how much to pivot
+    PULSOUT LMotor, LFastR
+    PULSOUT RMotor, RSlowF
+    NEXT
+  GOTO Main
